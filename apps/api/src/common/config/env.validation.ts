@@ -3,6 +3,7 @@ import {
   IsEnum,
   IsInt,
   IsNotEmpty,
+  IsOptional,
   IsString,
   MinLength,
   validateSync,
@@ -38,7 +39,29 @@ export class EnvironmentVariables {
 
   @IsString()
   @IsNotEmpty()
-  JWT_EXPIRES_IN: string = '7d';
+  JWT_ACCESS_EXPIRES_IN: string = '15m';
+
+  @IsString()
+  @MinLength(16, {
+    message: 'JWT_REFRESH_SECRET must be at least 16 characters long',
+  })
+  JWT_REFRESH_SECRET!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  JWT_REFRESH_EXPIRES_IN: string = '7d';
+
+  // --- File storage (local disk for now; swappable to S3 later) ---
+
+  /** Root directory for uploaded meeting files, relative to the API cwd. */
+  @IsString()
+  @IsNotEmpty()
+  STORAGE_LOCAL_DIR: string = './storage';
+
+  /** Max upload size in megabytes, enforced by MeetingsService. */
+  @IsOptional()
+  @IsInt()
+  MAX_UPLOAD_SIZE_MB: number = 1024;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

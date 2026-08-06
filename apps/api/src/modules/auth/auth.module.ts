@@ -5,14 +5,19 @@ import type { JwtSignOptions } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
+import { UsersModule } from '@/modules/users/users.module';
+
 import { AuthController } from './controllers/auth.controller';
 import { AuthService } from './services/auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { UserRepository } from './repositories/user.repository';
+import { RefreshTokenRepository } from './repositories/refresh-token.repository';
 
 @Module({
   imports: [
     ConfigModule,
+
+    // Owns the User aggregate; AuthService looks up / creates users through it.
+    UsersModule,
 
     PassportModule,
 
@@ -25,7 +30,7 @@ import { UserRepository } from './repositories/user.repository';
 
         signOptions: {
           expiresIn: configService.getOrThrow<string>(
-            'JWT_EXPIRES_IN',
+            'JWT_ACCESS_EXPIRES_IN',
           ) as JwtSignOptions['expiresIn'],
         },
       }),
@@ -34,7 +39,11 @@ import { UserRepository } from './repositories/user.repository';
 
   controllers: [AuthController],
 
-  providers: [AuthService, JwtStrategy, UserRepository],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    RefreshTokenRepository,
+  ],
 
   exports: [AuthService],
 })
