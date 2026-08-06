@@ -1,0 +1,45 @@
+# Tài liệu
+
+Tài liệu chi tiết của AI Meeting Assistant. Phần quick start và hướng dẫn sử dụng
+nằm ở [README gốc](../README.md).
+
+> **Tình trạng:** bộ khung ứng dụng đã hoàn chỉnh, nhưng **phần AI chưa được cài
+> đặt**. Yêu cầu tạo transcript hay summary chỉ ghi một dòng `PENDING` và không
+> có gì xử lý nó. Xem [Hạn chế đã biết](known-gaps.md).
+
+## Kiến trúc
+
+| Tài liệu | Nội dung |
+| --- | --- |
+| [Tổng quan](architecture/overview.md) | Hình dạng hệ thống, request pipeline, bảng route tập trung |
+| [Mô hình dữ liệu](architecture/data-model.md) | Prisma schema, enum, quan hệ, cascade |
+| [Xác thực](architecture/authentication.md) | Access/refresh token, xoay vòng, phát hiện tái sử dụng |
+| [Phân quyền](architecture/authorization.md) | Kiểm tra membership và policy theo capability |
+| [Lưu trữ file](architecture/storage.md) | `StorageService`, validate upload, chặn path traversal |
+| [Quy ước code](architecture/conventions.md) | Phân lớp module, cấu trúc feature folder, path alias |
+
+## Tham chiếu API
+
+| Tài liệu | Nội dung |
+| --- | --- |
+| [Quy ước chung](api/README.md) | Response envelope, dạng lỗi, header xác thực, mã trạng thái |
+| [Auth](api/auth.md) | `register` · `login` · `refresh` · `logout` · `me` |
+| [Workspaces](api/workspaces.md) | CRUD workspace và quản lý thành viên |
+| [Meetings](api/meetings.md) | Upload, danh sách, chi tiết, sửa, xóa, tải file |
+| [Transcript & Summary](api/transcripts-and-summaries.md) | Yêu cầu và đọc các artifact AI |
+| [Action items](api/action-items.md) | CRUD công việc cần theo dõi |
+
+## Vận hành
+
+| Tài liệu | Nội dung |
+| --- | --- |
+| [Cấu hình](configuration.md) | Toàn bộ biến môi trường, giá trị mặc định, validate |
+| [Phát triển](development.md) | Cài đặt local, scripts, quy trình Prisma, package manager |
+| [Hạn chế đã biết](known-gaps.md) | Những giới hạn đã kiểm chứng của code hiện tại |
+
+## Sơ đồ
+
+| Tài liệu | Nội dung |
+| --- | --- |
+| [Kiến trúc hệ thống](diagrams/system-architecture.md) | Sơ đồ thành phần và luồng request |
+| [Quan hệ thực thể](diagrams/entity-relationship.md) | Sơ đồ ER và ghi chú quan hệ |
