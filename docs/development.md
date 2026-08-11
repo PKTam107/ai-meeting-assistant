@@ -40,6 +40,28 @@ npm run dev                   # http://localhost:3000
 API từ chối khởi động nếu thiếu bất kỳ biến môi trường bắt buộc nào — xem
 [Cấu hình](configuration.md).
 
+### Không có Docker (WSL)
+
+Nếu môi trường không chạy được Docker, thay bước 1 bằng bản cài đặt native:
+
+```bash
+sudo ./scripts/setup-dev-db.sh   # cài PostgreSQL, tạo role + database từ .env
+sudo apt install -y redis-server && sudo systemctl enable --now redis-server
+```
+
+Script đọc thẳng `DATABASE_URL` trong `apps/api/.env` nên cấu hình không thể lệch
+với app, và chạy lại nhiều lần đều an toàn.
+
+### Phiên bản Node
+
+Repo có `.nvmrc` khai báo Node 22 — chạy `nvm use` ở thư mục gốc.
+
+Lưu ý một cái bẫy: nếu nvm chỉ được nạp trong `~/.bashrc` mà máy không có
+`~/.profile`, thì shell non-interactive (script, tooling, CI runner cục bộ) sẽ
+**không** nạp nvm và rơi về `/usr/bin/node` của hệ thống — thường là một bản Node
+cũ. Triệu chứng là `node -v` cho kết quả khác nhau tùy chỗ gọi. Cách xử lý là đưa
+phần nạp nvm vào `~/.profile`.
+
 ## Scripts
 
 ### `apps/api` (pnpm)
