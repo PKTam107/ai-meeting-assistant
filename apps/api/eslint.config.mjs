@@ -32,4 +32,13 @@ export default tseslint.config(
       "prettier/prettier": ["error", { endOfLine: "auto" }],
     },
   },
+  {
+    files: ['**/*.spec.ts', 'test/**/*.ts'],
+    rules: {
+      // `expect(repo.method)` passes the method unbound on purpose — that is how
+      // jest matchers read a mock. The rule cannot tell that apart from an
+      // accidental `this` detachment, so it only produces noise in tests.
+      '@typescript-eslint/unbound-method': 'off',
+    },
+  },
 );

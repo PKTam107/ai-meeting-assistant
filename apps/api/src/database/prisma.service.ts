@@ -18,9 +18,11 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     await this.$connect();
   }
 
-  async enableShutdownHooks(app: INestApplication) {
-    process.on('beforeExit', async () => {
-      await app.close();
+  enableShutdownHooks(app: INestApplication) {
+    // `beforeExit` listeners are called synchronously and the process will not
+    // wait on a returned promise, so awaiting here would be misleading.
+    process.on('beforeExit', () => {
+      void app.close();
     });
   }
 }

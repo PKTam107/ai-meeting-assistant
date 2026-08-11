@@ -31,7 +31,8 @@ export class StorageService {
   private readonly root: string;
 
   constructor(private readonly configService: ConfigService) {
-    const dir = this.configService.get<string>('STORAGE_LOCAL_DIR') ?? './storage';
+    const dir =
+      this.configService.get<string>('STORAGE_LOCAL_DIR') ?? './storage';
     this.root = resolve(process.cwd(), dir);
   }
 
