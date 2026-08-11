@@ -45,7 +45,10 @@ export class RefreshTokenRepository {
   }
 
   /** Revoke every still-active token for a user (logout-all / theft response). */
-  revokeAllForUser(userId: string, revokedAt: Date): Promise<{ count: number }> {
+  revokeAllForUser(
+    userId: string,
+    revokedAt: Date,
+  ): Promise<{ count: number }> {
     return this.prisma.refreshToken.updateMany({
       where: { userId, revokedAt: null },
       data: { revokedAt },

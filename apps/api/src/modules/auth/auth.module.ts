@@ -39,11 +39,7 @@ import { RefreshTokenRepository } from './repositories/refresh-token.repository'
 
   controllers: [AuthController],
 
-  providers: [
-    AuthService,
-    JwtStrategy,
-    RefreshTokenRepository,
-  ],
+  providers: [AuthService, JwtStrategy, RefreshTokenRepository],
 
   exports: [AuthService],
 })

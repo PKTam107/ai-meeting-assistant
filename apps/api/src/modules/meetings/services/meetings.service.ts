@@ -152,9 +152,7 @@ export class MeetingsService {
     }
 
     const maxBytes =
-      this.configService.getOrThrow<number>('MAX_UPLOAD_SIZE_MB') *
-      1024 *
-      1024;
+      this.configService.getOrThrow<number>('MAX_UPLOAD_SIZE_MB') * 1024 * 1024;
     if (file.size > maxBytes) {
       throw new PayloadTooLargeException('Uploaded file is too large');
     }

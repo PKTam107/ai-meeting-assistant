@@ -60,18 +60,13 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const tokens = await this.authService.refresh(
-      this.readRefreshCookie(req),
-    );
+    const tokens = await this.authService.refresh(this.readRefreshCookie(req));
     return this.respondWithTokens(res, tokens);
   }
 
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  async logout(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     await this.authService.logout(this.readRefreshCookie(req));
     this.clearRefreshCookie(res);
     return { success: true };
