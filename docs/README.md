@@ -36,6 +36,7 @@ nằm ở [README gốc](../README.md).
 | [Cấu hình](configuration.md) | Toàn bộ biến môi trường, giá trị mặc định, validate |
 | [Phát triển](development.md) | Cài đặt local, scripts, quy trình Prisma, package manager |
 | [Hạn chế đã biết](known-gaps.md) | Những giới hạn đã kiểm chứng của code hiện tại |
+| [Lộ trình học](learning-roadmap.md) | Kế hoạch phát triển dự án, xếp theo kỹ thuật học được |
 
 ## Sơ đồ
 
