@@ -40,19 +40,35 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 // De-duplicate concurrent refreshes: every 401 awaits the same promise.
 let refreshing: Promise<string | null> | null = null;
 
+async function rotate(): Promise<string | null> {
+  try {
+    const res = await api.post<{ data: { accessToken: string } }>(
+      "/auth/refresh",
+    );
+    const token = res.data.data.accessToken;
+    setAccessToken(token);
+    return token;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The in-flight promise only de-duplicates within one tab. Refresh tokens are
+ * single-use, so two tabs posting the same cookie would look like a replay and
+ * cost the user every session they have. This lock serialises refreshes
+ * browser-wide, and whoever waits then sends the freshly rotated cookie.
+ */
+async function rotateExclusive(): Promise<string | null> {
+  if (typeof navigator === "undefined" || !navigator.locks) return rotate();
+  return await navigator.locks.request("auth-refresh", rotate);
+}
+
 async function refreshAccessToken(): Promise<string | null> {
   if (!refreshing) {
-    refreshing = api
-      .post<{ data: { accessToken: string } }>("/auth/refresh")
-      .then((res) => {
-        const token = res.data.data.accessToken;
-        setAccessToken(token);
-        return token;
-      })
-      .catch(() => null)
-      .finally(() => {
-        refreshing = null;
-      });
+    refreshing = rotateExclusive().finally(() => {
+      refreshing = null;
+    });
   }
   return refreshing;
 }

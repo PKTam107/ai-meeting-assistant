@@ -28,11 +28,20 @@ export class RefreshTokenRepository {
     return this.prisma.refreshToken.findUnique({ where: { id } });
   }
 
-  revoke(id: string, revokedAt: Date): Promise<RefreshToken> {
-    return this.prisma.refreshToken.update({
-      where: { id },
+  /**
+   * Atomically revoke a token only if it is still active, and report whether
+   * this call is the one that did it. Rotation depends on that exclusivity: a
+   * `false` return means someone else already spent this token, which is the
+   * reuse signal. Checking `revokedAt` with a separate read first would leave a
+   * window where two concurrent refreshes both believe they won.
+   */
+  async revokeIfActive(id: string, revokedAt: Date): Promise<boolean> {
+    const { count } = await this.prisma.refreshToken.updateMany({
+      where: { id, revokedAt: null },
       data: { revokedAt },
     });
+
+    return count > 0;
   }
 
   /** Revoke every still-active token for a user (logout-all / theft response). */

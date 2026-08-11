@@ -74,10 +74,11 @@ export class AuthService {
   }
 
   /**
-   * Rotate a refresh token: validate the presented one, revoke it, and issue a
-   * fresh access + refresh pair. If a token that was already revoked is
-   * presented (token reuse), every active token for that user is revoked as a
-   * theft-mitigation measure.
+   * Rotate a refresh token: validate the presented one, spend it, and issue a
+   * fresh access + refresh pair. Every token is single-use, so presenting one
+   * that has already been spent means the token leaked — the caller cannot be
+   * told apart from the legitimate user, so every active token for that user is
+   * revoked and everyone has to log in again.
    */
   async refresh(rawToken: string | undefined): Promise<AuthTokens> {
     if (!rawToken) {
@@ -100,15 +101,6 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    if (stored.revokedAt) {
-      // The token was valid but already rotated away — likely replayed/stolen.
-      await this.refreshTokenRepository.revokeAllForUser(
-        stored.userId,
-        new Date(),
-      );
-      throw new UnauthorizedException('Refresh token has been revoked');
-    }
-
     if (stored.expiresAt.getTime() <= Date.now()) {
       throw new UnauthorizedException('Refresh token has expired');
     }
@@ -118,7 +110,22 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    await this.refreshTokenRepository.revoke(stored.id, new Date());
+    // Spending the token and detecting reuse are one indivisible step. Losing
+    // this claim means the token had already been rotated away — either a
+    // replay of an old token or a second caller racing us with the same one.
+    // Both are treated as theft, so every active token for the user dies.
+    const claimed = await this.refreshTokenRepository.revokeIfActive(
+      stored.id,
+      new Date(),
+    );
+
+    if (!claimed) {
+      await this.refreshTokenRepository.revokeAllForUser(
+        stored.userId,
+        new Date(),
+      );
+      throw new UnauthorizedException('Refresh token has been revoked');
+    }
 
     return this.issueTokens(user);
   }
@@ -139,10 +146,9 @@ export class AuthService {
       return;
     }
 
-    const stored = await this.refreshTokenRepository.findById(payload.jti);
-    if (stored && !stored.revokedAt) {
-      await this.refreshTokenRepository.revoke(stored.id, new Date());
-    }
+    // Already-revoked tokens simply report false here; logout stays quiet
+    // either way rather than treating a double logout as reuse.
+    await this.refreshTokenRepository.revokeIfActive(payload.jti, new Date());
   }
 
   private async issueTokens(user: User): Promise<AuthTokens> {
