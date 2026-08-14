@@ -108,6 +108,12 @@ Bản ghi âm/ghi hình đã upload cùng trạng thái xử lý của nó.
 **Bytes thô không bao giờ vào database** — chỉ có `storageKey`. Xem
 [Lưu trữ file](storage.md).
 
+> Bốn cột file (`storageKey`, `originalName`, `mimeType`, `fileSize`) đều
+> `NOT NULL`, nghĩa là **một `Meeting` không thể tồn tại nếu chưa có file**. Đây
+> chính là chỗ chặn cuộc họp trực tiếp, và [Lộ trình](../learning-roadmap.md)
+> dự định tách phần này thành `Recording` / `RecordingTrack`. Trang này mô tả
+> schema **đang có**, không phải schema dự định.
+
 ### `Transcript` và `Summary`
 
 Cả hai đều 1:1 với một meeting (`meetingId` là unique) và dùng chung máy trạng

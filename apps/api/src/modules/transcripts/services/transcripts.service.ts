@@ -14,13 +14,14 @@ export class TranscriptsService {
   ) {}
 
   /**
-   * Request transcription for a meeting. For now this only records the PENDING
-   * intent; the actual AI transcription (e.g. Whisper) will be performed by a
-   * background worker that consumes PENDING rows.
+   * Request transcription for a meeting. This only records the PENDING intent:
+   * the worker process exists and runs jobs, but no transcription job type has
+   * been written yet, so nothing consumes the row.
    */
   async transcribe(meetingId: string, userId: string): Promise<Transcript> {
     await this.meetingsService.loadAccessible(meetingId, userId);
-    // TODO(ai): enqueue a BullMQ transcription job here once the worker exists.
+    // TODO(ai): enqueue a transcription job on the queue the worker already
+    // consumes — see src/queue/queues.ts for the media-metadata job it models.
     return this.transcriptRepository.enqueue(meetingId);
   }
 

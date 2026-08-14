@@ -3,9 +3,16 @@
 Tài liệu chi tiết của AI Meeting Assistant. Phần quick start và hướng dẫn sử dụng
 nằm ở [README gốc](../README.md).
 
-> **Tình trạng:** bộ khung ứng dụng đã hoàn chỉnh, nhưng **phần AI chưa được cài
-> đặt**. Yêu cầu tạo transcript hay summary chỉ ghi một dòng `PENDING` và không
-> có gì xử lý nó. Xem [Hạn chế đã biết](known-gaps.md).
+> **Mục tiêu:** họp ngay trong app, ghi lại, rồi ra transcript · summary · action
+> item — hoặc upload một bản ghi làm ở đâu đó và nhận đúng chừng đó. **Cả hai nửa
+> đều chưa được xây.** Cái đang có là mọi thứ bao quanh chúng: auth, workspace,
+> upload + lưu trữ, worker bất đồng bộ, CI, và giao diện web đầy đủ.
+>
+> Kế hoạch đi tới đó: [Lộ trình](learning-roadmap.md). Giới hạn đã kiểm chứng của
+> code hiện tại: [Hạn chế đã biết](known-gaps.md).
+>
+> Lưu ý ranh giới khi đọc: thư mục `architecture/` mô tả **cái đang có thật**,
+> còn [Lộ trình](learning-roadmap.md) mô tả **cái định làm**.
 
 ## Kiến trúc
 

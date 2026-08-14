@@ -5,9 +5,38 @@
 Mọi mục dưới đây đều đã được kiểm chứng trực tiếp trong code, không phải suy đoán
 từ roadmap.
 
-## 1. Chưa có AI
+Đo theo [mục tiêu hiện tại](learning-roadmap.md) — họp trong app, ghi lại, rồi
+xử lý — thì hai mục đầu là hai nửa còn thiếu của chính mục tiêu đó.
 
-Đây là lỗ hổng lớn nhất của một dự án tên là "AI Meeting Assistant".
+## 1. Chưa có phòng họp, và schema đang chặn nó
+
+Không có một dòng WebRTC nào trong `apps/api/src` hay `apps/web/src`. Không có
+signaling, không có SFU, không có khái niệm phiên họp trực tiếp. Cách duy nhất
+để một bản ghi vào được hệ thống là **upload một file đã ghi xong ở nơi khác**.
+
+`Meeting` hiện là *một file đã upload*, không phải *một cuộc họp*:
+
+```prisma
+model Meeting {
+  storageKey   String   // NOT NULL
+  originalName String   // NOT NULL
+  mimeType     String   // NOT NULL
+  fileSize     Int      // NOT NULL
+}
+```
+
+Bốn cột này không thể điền vào lúc **bắt đầu** một cuộc họp trực tiếp — file chỉ
+tồn tại sau khi họp xong. Nên đây không chỉ là "thiếu tính năng": phần lưu trữ
+file phải tách khỏi `Meeting` (thành `Recording` / `RecordingTrack`) trước khi
+viết được dòng WebRTC đầu tiên, và đó là breaking change với các endpoint meeting
+đang chạy.
+
+Cũng chưa có `MeetingParticipant` — hệ thống không có chỗ nào ghi lại *ai đã dự*,
+chỉ có ai là thành viên workspace.
+
+## 2. Chưa có AI
+
+Nửa còn lại của mục tiêu.
 
 `TranscriptsService.transcribe` và `SummariesService.summarize` ghi một dòng
 `PENDING` rồi return. Cả hai đều mang cùng một dấu vết:
@@ -17,9 +46,10 @@ từ roadmap.
 ```
 
 Hạ tầng queue thì đã có thật — worker process, BullMQ, retry, dead-letter — nhưng
-nó mới chỉ chạy job đo thời lượng media, không đụng gì tới AI (xem
-[Hàng đợi và worker](architecture/queue-and-worker.md)). Không có gì tiêu thụ các
-dòng `PENDING`, nên:
+nó mới chỉ chạy job đo thời lượng media (xem
+[Hàng đợi và worker](architecture/queue-and-worker.md)). **Worker đã tồn tại;
+thứ chưa tồn tại là một loại job AI.** Không có gì tiêu thụ các dòng `PENDING`,
+nên:
 
 - Transcript hay summary không bao giờ rời khỏi `PENDING`; `text` và `content`
   mãi là `null`.
@@ -32,13 +62,13 @@ Mọi thứ xung quanh phần AI — máy trạng thái, tầng lưu trữ, các
 các trạng thái UI cho `PROCESSING` / `COMPLETED` / `FAILED` — đều đã dựng xong và
 đang chờ.
 
-## 2. `Meeting.status` mới đi được nửa đường
+## 3. `Meeting.status` mới đi được nửa đường
 
 Worker metadata đưa meeting qua `UPLOADED → PROCESSING → READY`, và `FAILED` khi
 job chết hẳn. Nhưng `TRANSCRIBED` và `SUMMARIZED` vẫn là hai giá trị **không ai
 ghi**, vì chưa có bước AI nào tồn tại để ghi chúng.
 
-## 3. Dependency đã cài nhưng không dùng
+## 4. Dependency đã cài nhưng không dùng
 
 **API** — không được import ở đâu trong `src/`:
 
@@ -51,7 +81,7 @@ ghi**, vì chưa có bước AI nào tồn tại để ghi chúng.
 
 **Web** — `socket.io-client` đã cài và không dùng.
 
-## 4. `packages/shared-types` là code chết
+## 5. `packages/shared-types` là code chết
 
 Không có gì import `@ai-meeting/shared-types`. Cùng một bộ shape được định nghĩa
 ba lần:
@@ -65,7 +95,7 @@ ba lần:
 Chúng có thể lệch nhau âm thầm — không có gì đối chiếu khái niệm `Meeting` của
 web app với của API.
 
-## 5. Turborepo không hoạt động
+## 6. Turborepo không hoạt động
 
 `turbo.json` có định nghĩa đồ thị task, nhưng:
 
@@ -75,13 +105,13 @@ web app với của API.
 
 Nên turbo không tìm ra được các package. Hãy chạy lệnh riêng cho từng app.
 
-## 6. Trộn hai package manager
+## 7. Trộn hai package manager
 
 `apps/api` dùng pnpm (kèm `pnpm-workspace.yaml` riêng để khai báo build
 allowance), `apps/web` dùng npm, còn gốc repo có cả `pnpm-lock.yaml` lẫn
 `package-lock.json`.
 
-## 7. Test chỉ phủ một tính chất duy nhất
+## 8. Test chỉ phủ một tính chất duy nhất
 
 Toàn bộ test hiện có nằm quanh việc xoay refresh token: unit test cạnh
 `AuthService` và `test/refresh-rotation.e2e-spec.ts` chạy với PostgreSQL thật. CI
@@ -91,7 +121,7 @@ typecheck · build cho web.
 Không có gì khác được phủ. Workspace, meeting, upload, transcript, summary và
 action item — không module nào có test, và không có test nào chạm tới `apps/web`.
 
-## 8. Khung trống
+## 9. Khung trống
 
 Các thư mục tồn tại nhưng không chứa file nào:
 
@@ -106,12 +136,12 @@ infra/{docker,k8s,nginx,terraform}/
 `apps/worker/` vẫn rỗng **có chủ đích**: worker process sống trong
 `apps/api/src/worker/` và chạy bằng `pnpm start:worker`. Tách nó thành package
 riêng đòi hỏi một package dùng chung cho Prisma client, config và repository —
-mà monorepo hiện tại chưa gánh nổi (mục 5 và 6 ngay trên). Việc đó là một bước
+mà monorepo hiện tại chưa gánh nổi (mục 6 và 7 ngay trên). Việc đó là một bước
 dọn dẹp monorepo riêng, không phải điều kiện để có worker.
 
 `apps/api/README.md` vẫn là readme starter nguyên bản của NestJS.
 
-## 9. Giới hạn vận hành
+## 10. Giới hạn vận hành
 
 **Upload được buffer hoàn toàn trong bộ nhớ.** Multer dùng memory storage với mức
 chặn cứng 2 GiB; giới hạn cấu hình `MAX_UPLOAD_SIZE_MB` (mặc định 1024) chỉ được
@@ -136,7 +166,7 @@ mà người gọi được thấy.
 
 **Không có rate limit** cho đăng nhập, đăng ký hay refresh.
 
-## 10. Vài điểm thiếu nhất quán nhỏ trong API
+## 11. Vài điểm thiếu nhất quán nhỏ trong API
 
 - `POST /auth/logout` trả về payload `{ "success": true }`, sau đó lại bị
   interceptor bọc thêm — tạo ra `{"success":true,"data":{"success":true}}`.

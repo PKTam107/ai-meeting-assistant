@@ -3,9 +3,10 @@
 [← Mục lục API](README.md)
 
 > ⚠️ **Các endpoint này chỉ ghi nhận ý định.** Yêu cầu tạo transcript hay summary
-> sẽ ghi một dòng `PENDING` và trả `202`. Không có worker nào tiêu thụ những dòng
-> đó, nên chúng không bao giờ đạt `COMPLETED` và `text` / `content` mãi là
-> `null`. Xem [Hạn chế đã biết](../known-gaps.md).
+> sẽ ghi một dòng `PENDING` và trả `202`. Worker process **có tồn tại**, nhưng
+> chưa có loại job AI nào tiêu thụ những dòng đó, nên chúng không bao giờ đạt
+> `COMPLETED` và `text` / `content` mãi là `null`. Xem
+> [Hạn chế đã biết](../known-gaps.md).
 
 Hai tài nguyên này hành xử y hệt nhau — cùng vòng đời, cùng máy trạng thái, cùng
 dạng lỗi — nên được viết chung một trang.

@@ -1,18 +1,27 @@
 # AI Meeting Assistant
 
-A collaborative workspace for meeting recordings: upload audio or video into a
-shared workspace, and track the transcript, summary and follow-up action items
-that belong to each meeting.
+A collaborative workspace for meetings. The goal: **hold the meeting in the app,
+record it, and get back a transcript, a summary and follow-up action items** —
+or upload a recording made anywhere else and get the same thing.
 
 > **Status — read this first.**
-> The application skeleton is complete: authentication, workspaces with
-> role-based membership, meeting upload and file storage, and a full web UI.
-> An upload is now processed asynchronously — a worker reads the recording's
-> duration and moves the meeting to `READY`
-> ([docs/architecture/queue-and-worker.md](docs/architecture/queue-and-worker.md)).
-> **The AI itself is still not implemented.** Requesting a transcript or a
-> summary records a `PENDING` row and nothing consumes it, so it never
-> completes. Full list: [docs/known-gaps.md](docs/known-gaps.md).
+> Neither half of that goal is built yet. What exists is everything around
+> them, and it is solid: authentication with refresh-token rotation,
+> workspaces with role-based membership, meeting upload and file storage, an
+> async worker that probes uploads and drives their status, CI, and a full web
+> UI.
+>
+> | | State |
+> | --- | --- |
+> | Upload a recording, store it, inspect it | **works** |
+> | Meeting room (join a call in the app) | **not started** — no WebRTC anywhere, and `Meeting` currently cannot exist without a file |
+> | Recording a call | **not started** — follows the room |
+> | Transcript · summary · action-item extraction | **not started** — requesting one records a `PENDING` row and no AI job consumes it |
+> | Action items entered by hand | **works** |
+>
+> Where it is going, in what order and at what cost:
+> [docs/learning-roadmap.md](docs/learning-roadmap.md).
+> Verified limits of the code as it stands: [docs/known-gaps.md](docs/known-gaps.md).
 
 ## Stack
 
@@ -23,6 +32,7 @@ that belong to each meeting.
 | Auth | JWT access token + rotating refresh token in an httpOnly cookie |
 | Storage | Local disk, behind a swappable `StorageService` |
 | Jobs | BullMQ on Redis, consumed by a separate worker process |
+| Meeting room | Planned: LiveKit first, then a self-built SFU behind one interface |
 
 ## Structure
 
