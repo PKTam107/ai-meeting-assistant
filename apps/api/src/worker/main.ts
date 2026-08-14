@@ -1,5 +1,6 @@
-import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+
+import { Logger } from 'nestjs-pino';
 
 import { WorkerModule } from './worker.module';
 
@@ -11,7 +12,11 @@ import { WorkerModule } from './worker.module';
  * context — `NestFactory.create` would open an HTTP listener nobody calls.
  */
 async function bootstrap() {
-  const app = await NestFactory.createApplicationContext(WorkerModule);
+  const app = await NestFactory.createApplicationContext(WorkerModule, {
+    bufferLogs: true,
+  });
+
+  app.useLogger(app.get(Logger));
 
   // On SIGTERM this runs the shutdown hooks, and @nestjs/bullmq closes the
   // BullMQ worker: it stops taking new jobs and waits for the running one to
@@ -20,7 +25,7 @@ async function bootstrap() {
   // the at-least-once delivery every processor here is written to survive.
   app.enableShutdownHooks();
 
-  Logger.log('Worker running, waiting for jobs', 'Worker');
+  app.get(Logger).log('Worker running, waiting for jobs');
 }
 
 void bootstrap();

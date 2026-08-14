@@ -49,15 +49,6 @@ ghi**, vì chưa có bước AI nào tồn tại để ghi chúng.
 | `aws-sdk` | Backend lưu trữ S3 |
 | `uuid` | (thực tế code dùng `crypto.randomUUID`) |
 
-**API — đã cài nhưng không được nối vào `main.ts`**, đây là trường hợp đáng lưu ý
-hơn:
-
-| Package | Hệ quả |
-| --- | --- |
-| `helmet` | Không có security header |
-| `compression` | Không nén response |
-| `nestjs-pino`, `pino` | Không có structured logging — đang dùng logger mặc định của Nest |
-
 **Web** — `socket.io-client` đã cài và không dùng.
 
 ## 4. `packages/shared-types` là code chết
