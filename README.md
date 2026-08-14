@@ -1,15 +1,27 @@
 # AI Meeting Assistant
 
-A collaborative workspace for meeting recordings: upload audio or video into a
-shared workspace, and track the transcript, summary and follow-up action items
-that belong to each meeting.
+A collaborative workspace for meetings. The goal: **hold the meeting in the app,
+record it, and get back a transcript, a summary and follow-up action items** —
+or upload a recording made anywhere else and get the same thing.
 
 > **Status — read this first.**
-> The application skeleton is complete: authentication, workspaces with
-> role-based membership, meeting upload and file storage, and a full web UI.
-> **The AI itself is not implemented yet.** Requesting a transcript or a summary
-> records a `PENDING` row and nothing consumes it, so it never completes.
-> Full list: [docs/known-gaps.md](docs/known-gaps.md).
+> Neither half of that goal is built yet. What exists is everything around
+> them, and it is solid: authentication with refresh-token rotation,
+> workspaces with role-based membership, meeting upload and file storage, an
+> async worker that probes uploads and drives their status, CI, and a full web
+> UI.
+>
+> | | State |
+> | --- | --- |
+> | Upload a recording, store it, inspect it | **works** |
+> | Meeting room (join a call in the app) | **not started** — no WebRTC anywhere, and `Meeting` currently cannot exist without a file |
+> | Recording a call | **not started** — follows the room |
+> | Transcript · summary · action-item extraction | **not started** — requesting one records a `PENDING` row and no AI job consumes it |
+> | Action items entered by hand | **works** |
+>
+> Where it is going, in what order and at what cost:
+> [docs/learning-roadmap.md](docs/learning-roadmap.md).
+> Verified limits of the code as it stands: [docs/known-gaps.md](docs/known-gaps.md).
 
 ## Stack
 
@@ -19,18 +31,21 @@ that belong to each meeting.
 | Web | Next.js 16 (App Router) · React 19 · Tailwind 4 · TanStack Query |
 | Auth | JWT access token + rotating refresh token in an httpOnly cookie |
 | Storage | Local disk, behind a swappable `StorageService` |
+| Jobs | BullMQ on Redis, consumed by a separate worker process |
+| Meeting room | Planned: LiveKit first, then a self-built SFU behind one interface |
 
 ## Structure
 
 ```
 apps/
   api/          NestJS backend — controllers · services · repositories
+                plus src/worker/, a second process that consumes the queue
   web/          Next.js frontend — one folder per feature
-  worker/       Reserved for the AI worker (empty)
+  worker/       Empty — see docs/known-gaps.md for why the worker lives in api/
 packages/
   shared-types/ Type-only contracts (not yet consumed)
 docs/           Detailed documentation
-docker-compose.yml   PostgreSQL 16
+docker-compose.yml   PostgreSQL 16 · Redis 7
 ```
 
 `apps/api/src/` in more detail:
@@ -39,6 +54,8 @@ docker-compose.yml   PostgreSQL 16
 app.routes.ts       Central route table — the whole URL hierarchy in one file
 common/             Env validation · exception filter · response interceptor · storage
 database/           PrismaModule / PrismaService
+queue/              Queue names, payloads and the Redis connection
+worker/             The worker process: its own root module and entry point
 modules/
   auth/ users/ workspaces/ meetings/
   transcripts/ summaries/ action-items/
@@ -50,10 +67,10 @@ touches Prisma).
 
 ## Quick start
 
-**Prerequisites:** Node ≥ 20.19, pnpm, npm, Docker.
+**Prerequisites:** Node ≥ 20.19, pnpm, npm, Docker, ffmpeg (for `ffprobe`).
 
 ```bash
-# 1. Database
+# 1. PostgreSQL + Redis
 docker compose up -d
 
 # 2. API  →  http://localhost:4000
@@ -64,7 +81,11 @@ pnpm prisma migrate deploy
 pnpm prisma generate
 pnpm start:dev
 
-# 3. Web  →  http://localhost:3000   (second terminal)
+# 3. Worker (second terminal) — without it, meetings stay at UPLOADED
+cd apps/api
+pnpm start:worker:dev
+
+# 4. Web  →  http://localhost:3000   (third terminal)
 cd apps/web
 cp .env.example .env.local
 npm install
@@ -120,8 +141,9 @@ A meeting page (`/meetings/[id]`) has three sections:
 - **Action items** — create, edit and delete, with an optional assignee (must be
   a workspace member), a due date, and status `OPEN` → `IN_PROGRESS` → `DONE`
 
-> ⚠️ **Transcribe** and **Summarize** currently only queue intent. The section
-> will sit on "Processing…" forever, because no worker exists yet. Action items
+> ⚠️ **Transcribe** and **Summarize** currently only record intent. The section
+> will sit on "Processing…" forever, because no AI job consumes those rows yet —
+> the queue and worker that exist today handle media metadata only. Action items
 > work fully.
 
 Uploads are restricted to `audio/*` and `video/*` and to `MAX_UPLOAD_SIZE_MB`

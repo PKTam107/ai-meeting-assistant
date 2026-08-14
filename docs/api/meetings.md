@@ -58,9 +58,13 @@ Ghi chú:
   không được kiểm tra.
 - File được buffer **hoàn toàn trong bộ nhớ** trước khi ghi xuống đĩa (memory
   storage của Multer, giới hạn cứng 2 GiB).
-- `durationSec` không bao giờ được ghi — không có gì đọc metadata media.
-- `status` là `UPLOADED` và ở nguyên đó vĩnh viễn. Xem
-  [Hạn chế đã biết](../known-gaps.md).
+- Response trả về **ngay khi bytes đã được lưu**, với `status: "UPLOADED"` và
+  `durationSec: null`. Một job được đẩy vào queue ngay sau đó; worker sẽ chạy
+  `ffprobe` rồi cập nhật hai trường này. Client phải fetch lại để thấy
+  `status: "READY"` — chưa có kênh push nào.
+- Nếu Redis chết, upload **vẫn thành công** và meeting nằm lại ở `UPLOADED`
+  không có job nào phía sau. Xem
+  [Hàng đợi và worker](../architecture/queue-and-worker.md).
 
 **Ví dụ**
 
@@ -134,8 +138,8 @@ workspace — không giới hạn ở người upload.
 
 **`200`** — meeting sau khi cập nhật.
 
-Chỉ `title` và `description` được chuyển xuống database. Repository cũng nhận
-`status`, nhưng không route nào phơi ra trường đó.
+Chỉ `title` và `description` được chuyển xuống database. `status` chỉ do worker
+đổi, không route nào phơi nó ra cho client.
 
 ---
 

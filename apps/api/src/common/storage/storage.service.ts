@@ -59,6 +59,19 @@ export class StorageService {
     await rm(this.resolveKey(key), { force: true });
   }
 
+  /**
+   * Absolute filesystem path of a stored object.
+   *
+   * This is the one place the local-disk backend shows through, and it is
+   * deliberate: `ffprobe` seeks around a file, so it needs a path rather than
+   * the stream the rest of the app deals in. An S3 backend cannot answer this
+   * question — when one arrives, this becomes "give me a local copy" returning
+   * a disposable handle, and the worker is the only caller to update.
+   */
+  localPath(key: string): string {
+    return this.resolveKey(key);
+  }
+
   async exists(key: string): Promise<boolean> {
     try {
       await stat(this.resolveKey(key));

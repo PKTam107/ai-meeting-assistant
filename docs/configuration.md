@@ -15,7 +15,7 @@ vi phạm — không có giá trị dự phòng âm thầm nào lúc runtime.
 
 | Biến | Bắt buộc | Mặc định | Ràng buộc | Ghi chú |
 | --- | --- | --- | --- | --- |
-| `NODE_ENV` | không | `development` | `development` \| `production` \| `test` | Quyết định cờ `secure` của cookie refresh |
+| `NODE_ENV` | không | `development` | `development` \| `production` \| `test` | Cờ `secure` của cookie refresh, và mức log: `debug` + pretty ở dev, `info` + JSON ở production, im lặng ở test |
 | `PORT` | không | `4000` | số nguyên | |
 | `DATABASE_URL` | **có** | — | chuỗi không rỗng | Chuỗi kết nối PostgreSQL |
 | `JWT_SECRET` | **có** | — | ≥ 16 ký tự | Ký access token |
@@ -24,6 +24,9 @@ vi phạm — không có giá trị dự phòng âm thầm nào lúc runtime.
 | `JWT_REFRESH_EXPIRES_IN` | không | `7d` | chuỗi không rỗng | Đồng thời quyết định `expires` của cookie |
 | `STORAGE_LOCAL_DIR` | không | `./storage` | chuỗi không rỗng | Thư mục gốc chứa upload, tính tương đối so với **thư mục làm việc của process** |
 | `MAX_UPLOAD_SIZE_MB` | không | `1024` | số nguyên | Được `MeetingsService.validateFile` áp dụng |
+| `REDIS_URL` | không | `redis://localhost:6379` | URL `redis://` hoặc `rediss://` | Queue BullMQ. **API không boot được nếu thiếu Redis** |
+| `FFPROBE_PATH` | không | `ffprobe` | chuỗi không rỗng | Đường dẫn tới `ffprobe`; chỉ worker dùng |
+| `MEDIA_PROBE_TIMEOUT_MS` | không | `30000` | số nguyên | Quá hạn thì kill `ffprobe` và retry |
 
 ### Ghi chú cho từng biến
 
@@ -95,7 +98,20 @@ không nằm trong file compose, nên thứ tự khởi động là việc của
 [`prisma.config.ts`](../apps/api/prisma.config.ts) cho các lệnh CLI (file này nạp
 `.env` qua `dotenv/config`).
 
+### Redis
+
+Service `redis` trong cùng file compose, cổng `6379`, **không có volume** — job
+nhỏ và tái tạo được từ chính các row meeting, nên mất Redis là mất job đang bay
+chứ không mất dữ liệu.
+
+### `ffprobe` không phải dependency npm
+
+`FFPROBE_PATH` trỏ tới một **system package**: `sudo apt install ffmpeg`. Thiếu
+nó thì job probe fail dạng *tạm thời* (retry được), chứ không đánh hỏng meeting —
+xem [Hàng đợi và worker](architecture/queue-and-worker.md).
+
 ## Liên quan
 
 - [Phát triển](development.md) — cài đặt và quy trình Prisma
 - [Xác thực](architecture/authentication.md) — cách các biến JWT được dùng
+- [Hàng đợi và worker](architecture/queue-and-worker.md) — Redis, worker và job

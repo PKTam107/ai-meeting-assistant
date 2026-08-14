@@ -14,12 +14,14 @@ export class SummariesService {
   ) {}
 
   /**
-   * Request a summary for a meeting. Records the PENDING intent only; the LLM
-   * summarization runs later in a background worker over the transcript.
+   * Request a summary for a meeting. Records the PENDING intent only: the worker
+   * process exists and runs jobs, but no summarization job type has been written
+   * yet, so nothing consumes the row.
    */
   async summarize(meetingId: string, userId: string): Promise<Summary> {
     await this.meetingsService.loadAccessible(meetingId, userId);
-    // TODO(ai): enqueue a BullMQ summarization job here once the worker exists.
+    // TODO(ai): enqueue a summarization job on the queue the worker already
+    // consumes. It depends on the transcript, so it is a two-step chain.
     return this.summaryRepository.enqueue(meetingId);
   }
 

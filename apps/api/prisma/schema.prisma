@@ -84,9 +84,15 @@ model WorkspaceMember {
   @@index([userId])
 }
 
+/// Where a meeting sits in the processing pipeline.
+/// UPLOADED   bytes are stored, nothing has looked at them yet
+/// PROCESSING a worker has claimed it and is inspecting the media
+/// READY      duration is known; the media is usable and awaits transcription
+/// FAILED     a step gave up on it; the reason is on the artifact that failed
 enum MeetingStatus {
   UPLOADED
   PROCESSING
+  READY
   TRANSCRIBED
   SUMMARIZED
   FAILED

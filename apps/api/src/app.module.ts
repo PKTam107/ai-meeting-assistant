@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { RouterModule } from '@nestjs/core';
 
 import { validateEnv } from '@/common/config/env.validation';
+import { LoggingModule } from '@/common/logging/logging.module';
 import { StorageModule } from '@/common/storage/storage.module';
 
 import { PrismaModule } from '@/database/prisma.module';
@@ -25,6 +26,7 @@ import { appRoutes } from './app.routes';
       validate: validateEnv,
     }),
 
+    LoggingModule,
     PrismaModule,
     StorageModule,
 

@@ -12,7 +12,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { StatusBadge } from "@/components/ui/badge";
 import { PageLoader } from "@/components/ui/spinner";
 import { errorMessage } from "@/lib/api";
-import { formatBytes, formatDate } from "@/lib/utils";
+import { formatBytes, formatDate, formatDuration } from "@/lib/utils";
 import { useDeleteMeeting, useMeeting } from "@/features/meetings/hooks/use-meetings";
 import { TranscriptSection } from "@/features/meetings/components/transcript-section";
 import { SummarySection } from "@/features/meetings/components/summary-section";
@@ -62,7 +62,9 @@ export function MeetingDetail({ id }: { id: string }) {
           <h1 className="text-xl font-semibold text-zinc-900">{m.title}</h1>
           {m.description && <p className="mt-1 text-sm text-zinc-600">{m.description}</p>}
           <p className="mt-1 text-xs text-zinc-500">
-            {m.originalName} · {formatBytes(m.fileSize)} · {formatDate(m.createdAt)}
+            {m.originalName} · {formatBytes(m.fileSize)}
+            {formatDuration(m.durationSec) && ` · ${formatDuration(m.durationSec)}`} ·{" "}
+            {formatDate(m.createdAt)}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">

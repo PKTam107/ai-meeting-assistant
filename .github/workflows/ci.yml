@@ -34,9 +34,21 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+      # The API enqueues on upload, so it needs Redis to boot at all.
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
       NODE_ENV: test
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ai_meeting_assistant?schema=public
+      REDIS_URL: redis://localhost:6379
       JWT_SECRET: ci-access-secret-not-used-anywhere-real
       JWT_REFRESH_SECRET: ci-refresh-secret-not-used-anywhere-real
       JWT_ACCESS_EXPIRES_IN: 15m
@@ -54,6 +66,16 @@ jobs:
           node-version: 22
           cache: pnpm
           cache-dependency-path: apps/api/pnpm-lock.yaml
+
+      # ffprobe is a system package, not an npm dependency. The probe tests
+      # fail rather than skip when it is missing, so this step is what keeps
+      # them from silently disappearing.
+      - name: Install ffmpeg
+        run: |
+          if ! command -v ffprobe > /dev/null; then
+            sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+          fi
+          ffprobe -version | head -1
 
       - run: pnpm install --frozen-lockfile
 

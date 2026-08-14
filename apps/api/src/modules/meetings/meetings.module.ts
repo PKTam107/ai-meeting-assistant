@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { QueueModule } from '@/queue/queue.module';
 import { WorkspacesModule } from '@/modules/workspaces/workspaces.module';
 
 import { MeetingsController } from './controllers/meetings.controller';
@@ -9,7 +10,8 @@ import { MeetingRepository } from './repositories/meeting.repository';
 @Module({
   // WorkspacesModule exports WorkspacesService (the membership access gate).
   // StorageService is provided globally by StorageModule.
-  imports: [WorkspacesModule],
+  // QueueModule brings the media-metadata queue this service produces to.
+  imports: [WorkspacesModule, QueueModule],
 
   // Only the flat /meetings/:id routes live here; the workspace-scoped
   // upload/list routes are in WorkspaceMeetingsModule (different route prefix).

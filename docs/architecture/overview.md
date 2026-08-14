@@ -16,7 +16,9 @@ flowchart LR
 
     subgraph Server
         API["apps/api<br/>NestJS 11"]
+        WORKER["worker process<br/>cùng codebase, không có HTTP"]
         STORE[("Đĩa cục bộ<br/>STORAGE_LOCAL_DIR")]
+        REDIS[["Redis · BullMQ"]]
     end
 
     DB[("PostgreSQL 16<br/>qua Prisma 7")]
@@ -24,11 +26,17 @@ flowchart LR
     WEB -->|"REST · Bearer access token<br/>cookie refresh httpOnly"| API
     API --> DB
     API -->|"bytes audio/video"| STORE
+    API -->|"enqueue"| REDIS
+    REDIS -->|"job"| WORKER
+    WORKER --> DB
+    WORKER -->|"đọc file · ffprobe"| STORE
 ```
 
-Hệ thống đang chạy **không có** message broker, không có worker process và không
-có lớp WebSocket nào. `bullmq`, `ioredis` và các package WebSocket của Nest đã
-được cài nhưng không dùng — xem [Hạn chế đã biết](../known-gaps.md).
+Có **hai process** trên cùng một codebase: API phục vụ HTTP, worker chỉ nghe
+Redis. Chi tiết ở [Hàng đợi và worker](queue-and-worker.md).
+
+Chưa có lớp WebSocket nào — `@nestjs/websockets` và `socket.io` đã cài nhưng chưa
+dùng, xem [Hạn chế đã biết](../known-gaps.md).
 
 ## Request pipeline
 
@@ -37,7 +45,9 @@ Toàn bộ được cấu hình trong
 
 ```mermaid
 flowchart TD
-    REQ([HTTP request]) --> PREFIX["Prefix global: /api"]
+    REQ([HTTP request]) --> HELMET["helmet<br/>security header"]
+    HELMET --> COMPRESS["compression<br/>gzip từ 1 KB trở lên"]
+    COMPRESS --> PREFIX["Prefix global: /api"]
     PREFIX --> COOKIE["cookie-parser<br/>đọc cookie refresh"]
     COOKIE --> GUARD["JwtAuthGuard<br/>gắn theo controller, không global"]
     GUARD --> VALID["ValidationPipe<br/>whitelist · forbidNonWhitelisted · transform"]
@@ -60,6 +70,12 @@ Những điểm cần nắm:
 - **CORS** đang là `origin: true` (phản chiếu mọi origin) kèm `credentials: true`.
   Điều này cố ý để tiện phát triển local và cần một allowlist trước khi lên
   production.
+- **`helmet`** dùng mặc định, trừ `crossOriginResourcePolicy: 'cross-origin'` —
+  web app là origin khác, nên chính sách `same-origin` mặc định sẽ chặn nó đọc
+  mọi thứ API trả về.
+- **Log là JSON có cấu trúc** (`nestjs-pino`), dùng cho cả API lẫn worker.
+  `authorization`, `cookie` và `set-cookie` được redact trước khi ghi; ở
+  `NODE_ENV=test` logger im hẳn để khỏi chôn output của test.
 - **Validate biến môi trường chạy trước khi app khởi động.** Thiếu hoặc sai định
   dạng sẽ throw ngay lúc bootstrap chứ không đợi đến lúc dùng. Xem
   [Cấu hình](../configuration.md).

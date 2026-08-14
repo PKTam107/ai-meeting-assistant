@@ -62,6 +62,29 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsInt()
   MAX_UPLOAD_SIZE_MB: number = 1024;
+
+  // --- Background jobs ---
+
+  /**
+   * Redis backing the BullMQ queues. The API only enqueues; the worker process
+   * (`pnpm start:worker`) consumes. Both read this same variable.
+   */
+  @IsString()
+  @IsNotEmpty()
+  REDIS_URL: string = 'redis://localhost:6379';
+
+  /**
+   * `ffprobe` executable used to read media duration. Overridable because it is
+   * a system package, not an npm dependency — the worker cannot install it.
+   */
+  @IsString()
+  @IsNotEmpty()
+  FFPROBE_PATH: string = 'ffprobe';
+
+  /** How long a single `ffprobe` run may take before it is killed and retried. */
+  @IsOptional()
+  @IsInt()
+  MEDIA_PROBE_TIMEOUT_MS: number = 30_000;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

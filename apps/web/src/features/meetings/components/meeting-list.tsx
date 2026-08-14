@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/badge";
 import { PageLoader } from "@/components/ui/spinner";
-import { formatBytes, formatDate } from "@/lib/utils";
+import { formatBytes, formatDate, formatDuration } from "@/lib/utils";
 import { useWorkspaceMeetings } from "@/features/meetings/hooks/use-meetings";
 
 export function MeetingList({
@@ -50,7 +50,9 @@ export function MeetingList({
               <div className="min-w-0">
                 <p className="truncate font-medium text-zinc-900">{m.title}</p>
                 <p className="truncate text-xs text-zinc-500">
-                  {m.originalName} · {formatBytes(m.fileSize)} · {formatDate(m.createdAt)}
+                  {m.originalName} · {formatBytes(m.fileSize)}
+                  {formatDuration(m.durationSec) && ` · ${formatDuration(m.durationSec)}`} ·{" "}
+                  {formatDate(m.createdAt)}
                 </p>
               </div>
             </div>
