@@ -32,6 +32,10 @@ async function bootstrap() {
     credentials: true,
   });
 
+  // Lets SIGTERM run the onModuleDestroy hooks — without it the process dies
+  // with the database pool still open.
+  app.enableShutdownHooks();
+
   const port = configService.getOrThrow<number>('PORT');
   await app.listen(port);
 
