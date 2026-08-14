@@ -16,6 +16,9 @@ out/
 # Prisma generated client
 **/generated/prisma/
 
+# Uploaded meeting files (STORAGE_LOCAL_DIR, default apps/api/storage)
+apps/api/storage/
+
 # Environment variables (commit .env.example instead)
 .env
 .env.*

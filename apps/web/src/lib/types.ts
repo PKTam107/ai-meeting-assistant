@@ -27,6 +27,7 @@ export interface WorkspaceMember {
 export type MeetingStatus =
   | "UPLOADED"
   | "PROCESSING"
+  | "READY"
   | "TRANSCRIBED"
   | "SUMMARIZED"
   | "FAILED";

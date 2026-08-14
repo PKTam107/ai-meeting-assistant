@@ -16,7 +16,9 @@ flowchart LR
 
     subgraph Server
         API["apps/api<br/>NestJS 11"]
+        WORKER["worker process<br/>cùng codebase, không có HTTP"]
         STORE[("Đĩa cục bộ<br/>STORAGE_LOCAL_DIR")]
+        REDIS[["Redis · BullMQ"]]
     end
 
     DB[("PostgreSQL 16<br/>qua Prisma 7")]
@@ -24,11 +26,17 @@ flowchart LR
     WEB -->|"REST · Bearer access token<br/>cookie refresh httpOnly"| API
     API --> DB
     API -->|"bytes audio/video"| STORE
+    API -->|"enqueue"| REDIS
+    REDIS -->|"job"| WORKER
+    WORKER --> DB
+    WORKER -->|"đọc file · ffprobe"| STORE
 ```
 
-Hệ thống đang chạy **không có** message broker, không có worker process và không
-có lớp WebSocket nào. `bullmq`, `ioredis` và các package WebSocket của Nest đã
-được cài nhưng không dùng — xem [Hạn chế đã biết](../known-gaps.md).
+Có **hai process** trên cùng một codebase: API phục vụ HTTP, worker chỉ nghe
+Redis. Chi tiết ở [Hàng đợi và worker](queue-and-worker.md).
+
+Chưa có lớp WebSocket nào — `@nestjs/websockets` và `socket.io` đã cài nhưng chưa
+dùng, xem [Hạn chế đã biết](../known-gaps.md).
 
 ## Request pipeline
 

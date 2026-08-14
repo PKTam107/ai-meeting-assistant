@@ -16,6 +16,7 @@ nằm ở [README gốc](../README.md).
 | [Xác thực](architecture/authentication.md) | Access/refresh token, xoay vòng, phát hiện tái sử dụng |
 | [Phân quyền](architecture/authorization.md) | Kiểm tra membership và policy theo capability |
 | [Lưu trữ file](architecture/storage.md) | `StorageService`, validate upload, chặn path traversal |
+| [Hàng đợi và worker](architecture/queue-and-worker.md) | BullMQ, worker process, idempotency, retry, dead-letter |
 | [Quy ước code](architecture/conventions.md) | Phân lớp module, cấu trúc feature folder, path alias |
 
 ## Tham chiếu API

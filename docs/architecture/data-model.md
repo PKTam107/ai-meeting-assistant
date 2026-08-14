@@ -97,12 +97,12 @@ Bản ghi âm/ghi hình đã upload cùng trạng thái xử lý của nó.
 | `uploadedById` | `String` | FK → `User` (**không** cascade) |
 | `title` | `String` | ≤ 200 ký tự |
 | `description` | `String?` | ≤ 2000 ký tự |
-| `status` | `MeetingStatus` | Mặc định `UPLOADED` — **hiện không bao giờ được cập nhật** |
+| `status` | `MeetingStatus` | Mặc định `UPLOADED`; worker đẩy sang `PROCESSING` → `READY` (hoặc `FAILED`) |
 | `storageKey` | `String` | Khóa opaque trỏ vào `StorageService` |
 | `originalName` | `String` | Tên file phía client, dùng cho header tải về |
 | `mimeType` | `String` | Bắt buộc `audio/*` hoặc `video/*` |
 | `fileSize` | `Int` | Bytes |
-| `durationSec` | `Int?` | **Hiện không bao giờ được ghi** |
+| `durationSec` | `Int?` | Do worker ghi sau khi `ffprobe` đọc file (làm tròn lên, đơn vị giây) |
 | `createdAt` / `updatedAt` | `DateTime` | |
 
 **Bytes thô không bao giờ vào database** — chỉ có `storageKey`. Xem
@@ -144,12 +144,13 @@ Người được giao phải là thành viên workspace của meeting — kiể
 | Enum | Giá trị | Dùng bởi |
 | --- | --- | --- |
 | `WorkspaceRole` | `OWNER`, `ADMIN`, `MEMBER` | `WorkspaceMember.role` |
-| `MeetingStatus` | `UPLOADED`, `PROCESSING`, `TRANSCRIBED`, `SUMMARIZED`, `FAILED` | `Meeting.status` |
+| `MeetingStatus` | `UPLOADED`, `PROCESSING`, `READY`, `TRANSCRIBED`, `SUMMARIZED`, `FAILED` | `Meeting.status` |
 | `ProcessingStatus` | `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED` | `Transcript.status`, `Summary.status` |
 | `ActionItemStatus` | `OPEN`, `IN_PROGRESS`, `DONE` | `ActionItem.status` |
 
-Hiện chỉ `ActionItemStatus` và giá trị khởi tạo của các enum còn lại từng được
-ghi. `MeetingStatus` dừng ở `UPLOADED` còn `ProcessingStatus` dừng ở `PENDING`.
+`MeetingStatus` đi được tới `READY` nhờ worker metadata (xem
+[Hàng đợi và worker](queue-and-worker.md)); `TRANSCRIBED` và `SUMMARIZED` vẫn là
+giá trị chưa ai ghi, vì chưa có bước AI. `ProcessingStatus` vẫn dừng ở `PENDING`.
 
 ## Cascade khi xóa
 

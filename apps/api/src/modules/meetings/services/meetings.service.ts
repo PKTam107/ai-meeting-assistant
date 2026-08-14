@@ -4,16 +4,25 @@ import type { ReadStream } from 'fs';
 // module — the file type lives on the global Express.Multer namespace.
 import type {} from 'multer';
 
+import { InjectQueue } from '@nestjs/bullmq';
 import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
   PayloadTooLargeException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+import { Queue } from 'bullmq';
+
 import { StorageService } from '@/common/storage/storage.service';
+import {
+  MEDIA_METADATA_JOB_OPTIONS,
+  MEDIA_METADATA_QUEUE,
+  type MediaMetadataJob,
+} from '@/queue/queues';
 import { WorkspacesService } from '@/modules/workspaces/services/workspaces.service';
 
 import {
@@ -27,11 +36,15 @@ import type { Meeting } from '../../../../generated/prisma/client';
 
 @Injectable()
 export class MeetingsService {
+  private readonly logger = new Logger(MeetingsService.name);
+
   constructor(
     private readonly meetingRepository: MeetingRepository,
     private readonly workspacesService: WorkspacesService,
     private readonly storageService: StorageService,
     private readonly configService: ConfigService,
+    @InjectQueue(MEDIA_METADATA_QUEUE)
+    private readonly mediaMetadataQueue: Queue<MediaMetadataJob>,
   ) {}
 
   async create(
@@ -49,7 +62,7 @@ export class MeetingsService {
       prefix: `meetings/${workspaceId}`,
     });
 
-    return this.meetingRepository.create({
+    const meeting = await this.meetingRepository.create({
       workspaceId,
       uploadedById: userId,
       title: dto.title,
@@ -59,6 +72,39 @@ export class MeetingsService {
       mimeType: file!.mimetype,
       fileSize: stored.size,
     });
+
+    await this.enqueueMetadataProbe(meeting.id);
+
+    return meeting;
+  }
+
+  /**
+   * Hand the meeting to the worker for inspection.
+   *
+   * The upload itself has already succeeded at this point — the bytes are
+   * stored and the row exists — so a Redis outage must not turn it into a 500.
+   * The cost of that choice is a meeting stuck at UPLOADED with no job behind
+   * it; re-running the probe needs an operator until there is an endpoint for
+   * it.
+   */
+  private async enqueueMetadataProbe(meetingId: string): Promise<void> {
+    try {
+      await this.mediaMetadataQueue.add(
+        'probe',
+        { meetingId },
+        {
+          ...MEDIA_METADATA_JOB_OPTIONS,
+          // One job per meeting. If this upload is somehow retried, BullMQ
+          // drops the duplicate instead of probing the same file twice.
+          jobId: meetingId,
+        },
+      );
+    } catch (error) {
+      this.logger.error(
+        `Meeting ${meetingId} was stored but could not be queued for probing`,
+        error instanceof Error ? error.stack : String(error),
+      );
+    }
   }
 
   async findAllForWorkspace(
