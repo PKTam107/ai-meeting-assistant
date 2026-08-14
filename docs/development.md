@@ -9,7 +9,8 @@
 | Node.js | **≥ 20.19** (hoặc ≥ 22.12, hoặc ≥ 24) | Prisma 7 khai báo `^20.19 \|\| ^22.12 \|\| >=24`; Next 16 cần ≥ 20.9; NestJS 11 cần ≥ 20 |
 | pnpm | 9+ | `apps/api` được cài bằng pnpm |
 | npm | 10+ | `apps/web` được cài bằng npm |
-| Docker | bản gần đây bất kỳ | PostgreSQL qua `docker-compose.yml` |
+| Docker | bản gần đây bất kỳ | PostgreSQL và Redis qua `docker-compose.yml` |
+| ffmpeg | bản gần đây bất kỳ | `ffprobe` đọc thời lượng file upload — worker cần, API thì không |
 
 > **Việc trộn hai package manager là thực trạng hiện tại**, không phải khuyến
 > nghị: `apps/api` có `pnpm-lock.yaml`, `apps/web` có `package-lock.json`, và thư
@@ -19,18 +20,23 @@
 ## Cài đặt lần đầu
 
 ```bash
-# 1. Database
+# 1. Database + Redis
 docker compose up -d
+sudo apt install -y ffmpeg    # ffprobe cho worker
 
 # 2. API
 cd apps/api
 cp .env.example .env          # rồi đặt cả hai JWT secret
 pnpm install
-pnpm prisma migrate deploy    # áp dụng hai migration đang có
+pnpm prisma migrate deploy    # áp dụng các migration đang có
 pnpm prisma generate          # sinh ra apps/api/generated/prisma
 pnpm start:dev                # http://localhost:4000
 
-# 3. Web (terminal thứ hai)
+# 3. Worker (terminal thứ hai) — không có nó thì meeting nằm mãi ở UPLOADED
+cd apps/api
+pnpm start:worker:dev
+
+# 4. Web (terminal thứ ba)
 cd apps/web
 cp .env.example .env.local
 npm install
@@ -72,7 +78,10 @@ phần nạp nvm vào `~/.profile`.
 | `start:debug` | Watch kèm inspector |
 | `start` | Chạy một lần, không watch |
 | `build` | `nest build` → `dist/` |
-| `start:prod` | `node dist/main` (chạy `build` trước) |
+| `start:prod` | `node dist/src/main` (chạy `build` trước) |
+| `start:worker` | Worker process — nghe queue, không mở cổng nào |
+| `start:worker:dev` | Worker ở chế độ watch |
+| `start:worker:prod` | `node dist/src/worker/main` (chạy `build` trước) |
 | `lint` | ESLint trên `src`, `apps`, `libs`, `test` kèm `--fix` |
 | `format` | Prettier trên `src/**/*.ts` và `test/**/*.ts` |
 | `test` | Jest unit — khớp `*.spec.ts` dưới `src/` |
@@ -120,9 +129,6 @@ Mọi lệnh Prisma chạy từ `apps/api`.
 - Runtime dùng driver adapter `@prisma/adapter-pg` thay vì query engine binary
   viết bằng Rust.
 
-> **Nếu một lệnh Prisma báo `Cannot find module 'dotenv/config'`:**
-> `prisma.config.ts` import `dotenv` nhưng package này không được khai báo trong
-> `apps/api/package.json`. Khắc phục bằng `pnpm add -D dotenv` trong `apps/api`.
 
 ## Thêm một feature module vào API
 
@@ -162,16 +168,23 @@ Xem [Quy ước code](architecture/conventions.md).
 
 ## Kiểm thử
 
-Test suite hiện chỉ phủ phần xoay refresh token — phần duy nhất của hệ thống có
-tính đúng đắn phụ thuộc vào tranh chấp đồng thời:
+Test suite bám vào hai chỗ mà tính đúng đắn phụ thuộc vào tranh chấp và vào việc
+job có thể chạy hai lần:
 
 | Lệnh | Phủ gì |
 | --- | --- |
-| `pnpm test` | Unit test cạnh `AuthService`, repository được mock |
+| `pnpm test` | Unit: xoay refresh token (`AuthService`), và worker metadata — claim, idempotency, phân loại lỗi, dead-letter |
 | `pnpm test:e2e` | `test/refresh-rotation.e2e-spec.ts` — chạy với PostgreSQL thật |
 
-E2E cần một database đang chạy và migration đã apply; nó đọc `DATABASE_URL` từ
+E2E cần database đang chạy kèm migration đã apply, **và cần Redis** vì
+`AppModule` khởi tạo queue lúc boot. Nó đọc `DATABASE_URL` và `REDIS_URL` từ
 `apps/api/.env` như app thường.
+
+Ba test của `MediaProbeService` chạm vào `ffprobe` thật. Không có ffprobe thì
+chúng **skip ở local kèm cảnh báo, nhưng làm fail suite khi `CI=true`** — một
+test âm thầm không chạy ở đâu cả là cách nó biến mất trong nhiều tháng mà không
+ai biết. File media dùng để test là một WAV được dựng bằng tay ngay trong test,
+không phải fixture check-in và cũng không cần ffmpeg để tạo ra.
 
 Script `test:e2e` gọi Jest qua `node --experimental-vm-modules` thay vì gọi thẳng
 binary. Prisma 7 nạp wasm query-compiler bằng `import()` động, còn ts-jest biên

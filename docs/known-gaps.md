@@ -16,8 +16,10 @@ từ roadmap.
 // TODO(ai): enqueue a BullMQ transcription job here once the worker exists.
 ```
 
-`apps/worker/` là một **thư mục rỗng**. Không có gì tiêu thụ các dòng `PENDING`,
-nên:
+Hạ tầng queue thì đã có thật — worker process, BullMQ, retry, dead-letter — nhưng
+nó mới chỉ chạy job đo thời lượng media, không đụng gì tới AI (xem
+[Hàng đợi và worker](architecture/queue-and-worker.md)). Không có gì tiêu thụ các
+dòng `PENDING`, nên:
 
 - Transcript hay summary không bao giờ rời khỏi `PENDING`; `text` và `content`
   mãi là `null`.
@@ -30,15 +32,11 @@ Mọi thứ xung quanh phần AI — máy trạng thái, tầng lưu trữ, các
 các trạng thái UI cho `PROCESSING` / `COMPLETED` / `FAILED` — đều đã dựng xong và
 đang chờ.
 
-## 2. `Meeting.status` không bao giờ đổi
+## 2. `Meeting.status` mới đi được nửa đường
 
-Mọi meeting đứng nguyên ở `UPLOADED`. `MeetingRepository.update` có nhận trường
-`status`, nhưng `MeetingsService.update` chỉ chuyển xuống `title` và
-`description`, và không nơi gọi nào khác truyền `status`. Các giá trị
-`PROCESSING`, `TRANSCRIBED`, `SUMMARIZED` và `FAILED` là không thể chạm tới.
-
-`Meeting.durationSec` tương tự cũng không bao giờ được ghi — không có gì đọc
-metadata của file media.
+Worker metadata đưa meeting qua `UPLOADED → PROCESSING → READY`, và `FAILED` khi
+job chết hẳn. Nhưng `TRANSCRIBED` và `SUMMARIZED` vẫn là hai giá trị **không ai
+ghi**, vì chưa có bước AI nào tồn tại để ghi chúng.
 
 ## 3. Dependency đã cài nhưng không dùng
 
@@ -47,7 +45,6 @@ metadata của file media.
 | Package | Dự định dùng cho |
 | --- | --- |
 | `openai` | Chuyển giọng nói thành văn bản / tóm tắt |
-| `bullmq`, `ioredis`, `@nestjs/bullmq` | Hàng đợi job |
 | `@nestjs/websockets`, `@nestjs/platform-socket.io` | Cập nhật tiến độ realtime |
 | `aws-sdk` | Backend lưu trữ S3 |
 | `uuid` | (thực tế code dùng `crypto.randomUUID`) |
@@ -114,6 +111,12 @@ packages/eslint-config/
 packages/tsconfig/
 infra/{docker,k8s,nginx,terraform}/
 ```
+
+`apps/worker/` vẫn rỗng **có chủ đích**: worker process sống trong
+`apps/api/src/worker/` và chạy bằng `pnpm start:worker`. Tách nó thành package
+riêng đòi hỏi một package dùng chung cho Prisma client, config và repository —
+mà monorepo hiện tại chưa gánh nổi (mục 5 và 6 ngay trên). Việc đó là một bước
+dọn dẹp monorepo riêng, không phải điều kiện để có worker.
 
 `apps/api/README.md` vẫn là readme starter nguyên bản của NestJS.
 

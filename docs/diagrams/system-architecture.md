@@ -24,18 +24,27 @@ flowchart LR
     API -->|"Prisma 7 · adapter-pg"| DB
     API -->|"bytes audio/video"| STORE
 
-    WORKER["apps/worker<br/>(rỗng — chưa xây)"]
-    QUEUE[("Redis / BullMQ<br/>(chưa dựng)")]
-    API -.->|dự kiến| QUEUE
-    QUEUE -.->|dự kiến| WORKER
-    WORKER -.->|dự kiến| DB
-    WORKER -.->|dự kiến| STORE
+    WORKER["worker process<br/>apps/api/src/worker"]
+    QUEUE[("Redis · BullMQ<br/>queue media-metadata")]
+    FF["ffprobe"]
+    API -->|"enqueue {meetingId}"| QUEUE
+    QUEUE -->|job| WORKER
+    WORKER -->|"durationSec · status"| DB
+    WORKER -->|"đọc file"| STORE
+    WORKER --> FF
 
-    style WORKER stroke-dasharray: 5 5
-    style QUEUE stroke-dasharray: 5 5
+    WS["WebSocket gateway<br/>(chưa dựng)"]
+    AI["Job AI: transcribe · summarize<br/>(chưa dựng)"]
+    QUEUE -.->|dự kiến| AI
+    WORKER -.->|dự kiến| WS
+    WS -.->|dự kiến| WEB
+
+    style WS stroke-dasharray: 5 5
+    style AI stroke-dasharray: 5 5
 ```
 
-Các thành phần nét đứt chưa tồn tại — xem [Hạn chế đã biết](../known-gaps.md).
+Các thành phần nét đứt chưa tồn tại — xem [Hạn chế đã biết](../known-gaps.md) và
+[Hàng đợi và worker](../architecture/queue-and-worker.md).
 
 ## Request pipeline
 

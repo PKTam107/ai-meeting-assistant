@@ -17,5 +17,20 @@ services:
       timeout: 5s
       retries: 5
 
+  # Backs the BullMQ queues. Jobs are small and replayable from the meeting
+  # rows, so there is no volume here on purpose: losing this Redis loses
+  # in-flight jobs, not data.
+  redis:
+    image: redis:7-alpine
+    container_name: ai-meeting-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres_data:

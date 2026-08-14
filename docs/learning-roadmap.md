@@ -67,17 +67,21 @@ cùng lúc vào bước ghi — revert `244bece` thì nó fail với **hai** res
 > Tách cái khó "hạ tầng async" ra khỏi cái khó "AI". Làm riêng từng cái dễ hơn
 > nhiều so với debug cả hai cùng lúc.
 
-`apps/worker/` đang là thư mục rỗng. BullMQ, ioredis và `@nestjs/bullmq` đã được
-cài sẵn từ đầu và chưa từng được import.
+**Đã xong.** BullMQ, ioredis và `@nestjs/bullmq` — ba package cài sẵn từ đầu mà
+chưa từng được import — giờ đã chạy thật.
 
-- [ ] Dựng `apps/worker` thành một Nest standalone application
-- [ ] Queue `media-metadata`; producer đặt job trong `MeetingsService.create`
-- [ ] Consumer chạy `ffprobe` → ghi `durationSec`, đẩy `Meeting.status`
+- [x] Dựng worker thành một Nest standalone application — nằm ở
+      `apps/api/src/worker/`, không phải `apps/worker/`: tách thành package riêng
+      cần trước một package dùng chung cho Prisma client và config, mà monorepo
+      hiện tại chưa gánh nổi. Vẫn là **process riêng**, chạy bằng
+      `pnpm start:worker`
+- [x] Queue `media-metadata`; producer đặt job trong `MeetingsService.create`
+- [x] Consumer chạy `ffprobe` → ghi `durationSec`, đẩy `Meeting.status`
       `UPLOADED → PROCESSING → READY`
-- [ ] Retry với exponential backoff, và dead-letter queue cho job chết hẳn
-- [ ] **Idempotency**: chạy lại cùng một job hai lần không được làm hỏng dữ liệu
-- [ ] Graceful shutdown: worker đang chạy job mà bị kill thì job phải quay lại queue
-- [ ] Test consumer
+- [x] Retry với exponential backoff, và dead-letter queue cho job chết hẳn
+- [x] **Idempotency**: chạy lại cùng một job hai lần không được làm hỏng dữ liệu
+- [x] Graceful shutdown: worker đang chạy job mà bị kill thì job phải quay lại queue
+- [x] Test consumer
 
 **Kỹ thuật học được:** mô hình producer/consumer, at-least-once delivery và vì
 sao nó buộc bạn phải idempotent, exponential backoff, dead-letter queue, graceful
@@ -87,6 +91,13 @@ shutdown, chạy nhiều process cùng lúc và cách chúng chia việc.
 chạy thật và đã được kiểm chứng. Lúc đó lỗi phát sinh chắc chắn là lỗi AI, không
 phải lỗi queue. `Meeting.status` với 5 giá trị hiện chỉ dùng đúng một cũng sống
 lại trong bước này.
+
+**Đã học được gì thêm khi làm:** chỗ khó nhất không phải producer/consumer mà là
+trạng thái *giữa chừng*. Claim bằng UPDATE có điều kiện chặn được hai worker cùng
+làm một meeting, nhưng lại tạo ra một hố mới: worker chết giữa lúc probe thì
+meeting nằm lại ở `PROCESSING` và không lần thử nào claim được nữa. Nên claim
+phải phân biệt "lần đầu" với "chính tôi thử lại" — chi tiết trong
+[Hàng đợi và worker](architecture/queue-and-worker.md).
 
 ---
 
