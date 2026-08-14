@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
 import { validateEnv } from '@/common/config/env.validation';
+import { LoggingModule } from '@/common/logging/logging.module';
 import { StorageModule } from '@/common/storage/storage.module';
 import { PrismaModule } from '@/database/prisma.module';
 import { MeetingRepository } from '@/modules/meetings/repositories/meeting.repository';
@@ -22,6 +23,7 @@ import { MediaProbeService } from './services/media-probe.service';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
+    LoggingModule,
     PrismaModule,
     StorageModule,
     QueueModule,

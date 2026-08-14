@@ -45,7 +45,9 @@ Toàn bộ được cấu hình trong
 
 ```mermaid
 flowchart TD
-    REQ([HTTP request]) --> PREFIX["Prefix global: /api"]
+    REQ([HTTP request]) --> HELMET["helmet<br/>security header"]
+    HELMET --> COMPRESS["compression<br/>gzip từ 1 KB trở lên"]
+    COMPRESS --> PREFIX["Prefix global: /api"]
     PREFIX --> COOKIE["cookie-parser<br/>đọc cookie refresh"]
     COOKIE --> GUARD["JwtAuthGuard<br/>gắn theo controller, không global"]
     GUARD --> VALID["ValidationPipe<br/>whitelist · forbidNonWhitelisted · transform"]
@@ -68,6 +70,12 @@ Những điểm cần nắm:
 - **CORS** đang là `origin: true` (phản chiếu mọi origin) kèm `credentials: true`.
   Điều này cố ý để tiện phát triển local và cần một allowlist trước khi lên
   production.
+- **`helmet`** dùng mặc định, trừ `crossOriginResourcePolicy: 'cross-origin'` —
+  web app là origin khác, nên chính sách `same-origin` mặc định sẽ chặn nó đọc
+  mọi thứ API trả về.
+- **Log là JSON có cấu trúc** (`nestjs-pino`), dùng cho cả API lẫn worker.
+  `authorization`, `cookie` và `set-cookie` được redact trước khi ghi; ở
+  `NODE_ENV=test` logger im hẳn để khỏi chôn output của test.
 - **Validate biến môi trường chạy trước khi app khởi động.** Thiếu hoặc sai định
   dạng sẽ throw ngay lúc bootstrap chứ không đợi đến lúc dùng. Xem
   [Cấu hình](../configuration.md).

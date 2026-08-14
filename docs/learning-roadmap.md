@@ -181,11 +181,12 @@ xong không dạy gì, và một phiên bản đáng học thật sự. Chọn c
 
 ### Làm ngay vì quá rẻ
 
-`helmet` · `compression` · `pino` (cả ba đã cài sẵn, chưa nối vào `main.ts`) ·
-CORS allowlist.
+- [x] `helmet` · `compression` · `pino` — đã nối vào cả API lẫn worker
+- [ ] CORS allowlist (vẫn đang là `origin: true`)
 
-Tổng cộng khoảng 10 phút. Giá trị học gần bằng không, nhưng nếu dự án này còn
-được đem cho ai xem thì thiếu chúng là thứ người review nhìn ra trong 30 giây.
+Đúng như dự đoán, giá trị học gần bằng không — trừ một chi tiết: log request mà
+không redact thì `authorization` và `set-cookie` đi thẳng vào log aggregator, và
+ở đó một refresh token bị lộ sống lâu hơn chính phiên nó thuộc về.
 
 ### Giá trị học thấp thật
 

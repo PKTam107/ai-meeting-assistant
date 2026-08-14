@@ -15,7 +15,7 @@ vi phạm — không có giá trị dự phòng âm thầm nào lúc runtime.
 
 | Biến | Bắt buộc | Mặc định | Ràng buộc | Ghi chú |
 | --- | --- | --- | --- | --- |
-| `NODE_ENV` | không | `development` | `development` \| `production` \| `test` | Quyết định cờ `secure` của cookie refresh |
+| `NODE_ENV` | không | `development` | `development` \| `production` \| `test` | Cờ `secure` của cookie refresh, và mức log: `debug` + pretty ở dev, `info` + JSON ở production, im lặng ở test |
 | `PORT` | không | `4000` | số nguyên | |
 | `DATABASE_URL` | **có** | — | chuỗi không rỗng | Chuỗi kết nối PostgreSQL |
 | `JWT_SECRET` | **có** | — | ≥ 16 ký tự | Ký access token |
