@@ -75,8 +75,8 @@ phần nạp nvm vào `~/.profile`.
 | `start:prod` | `node dist/main` (chạy `build` trước) |
 | `lint` | ESLint trên `src`, `apps`, `libs`, `test` kèm `--fix` |
 | `format` | Prettier trên `src/**/*.ts` và `test/**/*.ts` |
-| `test` | Jest unit — khớp `*.spec.ts` dưới `src/`. **Không có file nào như vậy** |
-| `test:e2e` | Jest e2e — **hiện đang fail**, xem [Hạn chế đã biết](known-gaps.md) |
+| `test` | Jest unit — khớp `*.spec.ts` dưới `src/` |
+| `test:e2e` | Jest e2e — cần PostgreSQL đang chạy, xem [Kiểm thử](#kiểm-thử) |
 | `test:cov` | Coverage |
 
 ### `apps/web` (npm)
@@ -162,8 +162,21 @@ Xem [Quy ước code](architecture/conventions.md).
 
 ## Kiểm thử
 
-Gần như không có test suite. `apps/api/test/app.e2e-spec.ts` là file scaffold mặc
-định của NestJS, kiểm tra `GET /` trả về `Hello World!` — một route không tồn tại
-trong app này, nên nó fail. Xem [Hạn chế đã biết](known-gaps.md).
+Test suite hiện chỉ phủ phần xoay refresh token — phần duy nhất của hệ thống có
+tính đúng đắn phụ thuộc vào tranh chấp đồng thời:
 
-Không có CI: `.github/workflows/` rỗng.
+| Lệnh | Phủ gì |
+| --- | --- |
+| `pnpm test` | Unit test cạnh `AuthService`, repository được mock |
+| `pnpm test:e2e` | `test/refresh-rotation.e2e-spec.ts` — chạy với PostgreSQL thật |
+
+E2E cần một database đang chạy và migration đã apply; nó đọc `DATABASE_URL` từ
+`apps/api/.env` như app thường.
+
+Script `test:e2e` gọi Jest qua `node --experimental-vm-modules` thay vì gọi thẳng
+binary. Prisma 7 nạp wasm query-compiler bằng `import()` động, còn ts-jest biên
+dịch sang CommonJS — không có cờ đó, VM của Jest chặn callback và mọi test chết
+ngay ở `app.init()` với `A dynamic import callback was invoked without
+--experimental-vm-modules`.
+
+CI chạy đúng những lệnh này: xem [.github/workflows/ci.yml](../.github/workflows/ci.yml).

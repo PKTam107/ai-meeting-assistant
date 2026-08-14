@@ -93,27 +93,17 @@ Nên turbo không tìm ra được các package. Hãy chạy lệnh riêng cho t
 allowance), `apps/web` dùng npm, còn gốc repo có cả `pnpm-lock.yaml` lẫn
 `package-lock.json`.
 
-## 7. `dotenv` không được khai báo
+## 7. Test chỉ phủ một tính chất duy nhất
 
-`apps/api/prisma.config.ts` gọi `import "dotenv/config"`, nhưng `dotenv` không có
-trong `apps/api/package.json` và không được link tại `node_modules/dotenv` (nó chỉ
-tồn tại trong pnpm store dưới dạng dependency gián tiếp). Với cách bố trí nghiêm
-ngặt của pnpm, việc resolve này có thể thất bại. Nếu một lệnh Prisma CLI báo
-`Cannot find module 'dotenv/config'`, hãy chạy `pnpm add -D dotenv`.
+Toàn bộ test hiện có nằm quanh việc xoay refresh token: unit test cạnh
+`AuthService` và `test/refresh-rotation.e2e-spec.ts` chạy với PostgreSQL thật. CI
+(`.github/workflows/ci.yml`) chạy lint · typecheck · unit · e2e cho API và lint ·
+typecheck · build cho web.
 
-## 8. Gần như không có test, và không có CI
+Không có gì khác được phủ. Workspace, meeting, upload, transcript, summary và
+action item — không module nào có test, và không có test nào chạm tới `apps/web`.
 
-File test duy nhất là scaffold mặc định của NestJS,
-`apps/api/test/app.e2e-spec.ts`, kiểm tra `GET /` trả về `Hello World!`. Route đó
-không tồn tại — `AppModule` không đăng ký controller nào và mọi route thật đều
-nằm dưới prefix global `/api` — nên `pnpm test:e2e` **fail**.
-
-Bộ unit test (`pnpm test`, khớp `*.spec.ts` dưới `src/`) không tìm thấy test nào.
-
-`.github/workflows/` rỗng, nên không có gì được kiểm tra khi push hay mở pull
-request.
-
-## 9. Khung trống
+## 8. Khung trống
 
 Các thư mục tồn tại nhưng không chứa file nào:
 
@@ -123,12 +113,11 @@ packages/ui/
 packages/eslint-config/
 packages/tsconfig/
 infra/{docker,k8s,nginx,terraform}/
-.github/workflows/
 ```
 
 `apps/api/README.md` vẫn là readme starter nguyên bản của NestJS.
 
-## 10. Giới hạn vận hành
+## 9. Giới hạn vận hành
 
 **Upload được buffer hoàn toàn trong bộ nhớ.** Multer dùng memory storage với mức
 chặn cứng 2 GiB; giới hạn cấu hình `MAX_UPLOAD_SIZE_MB` (mặc định 1024) chỉ được
@@ -153,7 +142,7 @@ mà người gọi được thấy.
 
 **Không có rate limit** cho đăng nhập, đăng ký hay refresh.
 
-## 11. Vài điểm thiếu nhất quán nhỏ trong API
+## 10. Vài điểm thiếu nhất quán nhỏ trong API
 
 - `POST /auth/logout` trả về payload `{ "success": true }`, sau đó lại bị
   interceptor bọc thêm — tạo ra `{"success":true,"data":{"success":true}}`.
