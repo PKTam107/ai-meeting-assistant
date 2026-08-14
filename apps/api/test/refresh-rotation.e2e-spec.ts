@@ -10,6 +10,7 @@ import type { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { TransformInterceptor } from '../src/common/interceptors/transform.interceptor';
 import { PrismaService } from '../src/database/prisma.service';
+import { RefreshTokenRepository } from '../src/modules/auth/repositories/refresh-token.repository';
 
 /**
  * Refresh-token rotation against a real database.
@@ -23,6 +24,7 @@ import { PrismaService } from '../src/database/prisma.service';
 describe('Refresh token rotation (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaService;
+  let refreshTokens: RefreshTokenRepository;
   const createdUserIds: string[] = [];
 
   beforeAll(async () => {
@@ -46,6 +48,7 @@ describe('Refresh token rotation (e2e)', () => {
 
     await app.init();
     prisma = moduleRef.get(PrismaService);
+    refreshTokens = moduleRef.get(RefreshTokenRepository);
   });
 
   afterAll(async () => {
@@ -115,17 +118,66 @@ describe('Refresh token rotation (e2e)', () => {
 
   it('lets exactly one of two concurrent refreshes win', async () => {
     const cookie = await registerUser();
+    // The mock below stands in for `findById`, so it reads through to the
+    // database itself rather than calling the method it is replacing.
+    const readThrough = (id: string) =>
+      prisma.refreshToken.findUnique({ where: { id } });
 
-    const results = await Promise.all([
-      refreshWith(cookie).then((r) => r.status),
-      refreshWith(cookie).then((r) => r.status),
-    ]);
+    // Firing two requests and hoping they collide does not test anything: the
+    // window between reading the row and writing it is a couple of
+    // milliseconds, and in practice the second request arrives after the first
+    // has already finished — the buggy version passes that test every time.
+    //
+    // So hold both callers at exactly the interleaving the fix exists for:
+    // each has read the token row, neither has written yet, and both then race
+    // to spend it.
+    let arrived = 0;
+    let bothHaveRead!: () => void;
+    const barrier = new Promise<void>((resolve) => (bothHaveRead = resolve));
 
-    // This is the assertion the whole atomic-claim change exists for. Before
-    // it, both callers could read an active row and both be issued a live
-    // token — a silent session fork with no reuse detected.
-    expect(results.filter((status) => status === 200)).toHaveLength(1);
-    expect(results.filter((status) => status === 401)).toHaveLength(1);
+    const held = jest
+      .spyOn(refreshTokens, 'findById')
+      .mockImplementation(async (id: string) => {
+        const row = await readThrough(id);
+
+        if (++arrived >= 2) {
+          bothHaveRead();
+        }
+
+        // If only one caller ever shows up, time out rather than hang the
+        // suite until Jest's own timeout kills it with a useless message. The
+        // timer is cleared on the way out, or the winner's unfired timeout
+        // keeps the event loop alive after the run.
+        let timeout: NodeJS.Timeout | undefined;
+        try {
+          await Promise.race([
+            barrier,
+            new Promise((resolve) => {
+              timeout = setTimeout(resolve, 2_000);
+            }),
+          ]);
+        } finally {
+          clearTimeout(timeout);
+        }
+
+        return row;
+      });
+
+    try {
+      const results = await Promise.all([
+        refreshWith(cookie).then((r) => r.status),
+        refreshWith(cookie).then((r) => r.status),
+      ]);
+
+      expect(arrived).toBe(2);
+
+      // Before the atomic claim, both callers read an active row and both were
+      // issued a live token — a silent session fork with no reuse detected.
+      expect(results.filter((status) => status === 200)).toHaveLength(1);
+      expect(results.filter((status) => status === 401)).toHaveLength(1);
+    } finally {
+      held.mockRestore();
+    }
   });
 
   it('rejects a refresh with no cookie at all', async () => {

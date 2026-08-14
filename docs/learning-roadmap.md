@@ -33,15 +33,15 @@ khi chọn giữa hai cách làm, ghi lại lý do.
 
 - [x] Node 22 có hiệu lực (`.nvmrc`, `~/.profile`)
 - [x] Redis chạy và tự khởi động
-- [ ] PostgreSQL — chạy `sudo ./scripts/setup-dev-db.sh`
-- [ ] Xoá `apps/api/test/app.e2e-spec.ts` — nó kiểm tra `GET /` trả `Hello World!`,
+- [x] PostgreSQL — chạy `sudo ./scripts/setup-dev-db.sh`
+- [x] Xoá `apps/api/test/app.e2e-spec.ts` — nó kiểm tra `GET /` trả `Hello World!`,
       một route không tồn tại, nên đang luôn fail
-- [ ] **Unit test đầu tiên: `AuthService.refresh`** — mock repository, chứng minh
+- [x] **Unit test đầu tiên: `AuthService.refresh`** — mock repository, chứng minh
       `revokeIfActive` trả `false` thì gọi `revokeAllForUser` và ném 401
-- [ ] **Integration test: race thật** — hai lời gọi `refresh` song song với cùng
+- [x] **Integration test: race thật** — hai lời gọi `refresh` song song với cùng
       một token trên Postgres thật, chứng minh đúng một cái thắng
-- [ ] GitHub Actions: lint + typecheck + test, dùng service container cho
-      Postgres và Redis
+- [x] GitHub Actions: lint + typecheck + test, dùng service container cho
+      Postgres (Redis thêm ở GĐ 1, khi đã có thứ thật sự dùng tới nó)
 
 **Kỹ thuật học được:** Jest, `Test.createTestingModule` của Nest và cách mock
 dependency injection, test tích hợp với DB thật, GitHub Actions service
@@ -51,6 +51,14 @@ container, phân biệt unit test và integration test *bằng việc thấy rõ
 **Dấu hiệu hoàn thành:** revert commit `244bece` (bản vá race condition) thì
 integration test **phải fail**. Nếu nó vẫn xanh, test của bạn chưa kiểm tra thứ
 bạn tưởng.
+
+Bản đầu tiên của test **vẫn xanh** khi revert — đúng cái bẫy mà dòng trên cảnh
+báo. Bắn hai request rồi mong chúng đụng nhau là không đủ: cửa sổ giữa lúc đọc
+row và lúc ghi chỉ vài mili-giây, còn request thứ hai thì thường tới sau khi
+request đầu đã xong, nên bản có bug vẫn cho đúng một 200 và một 401. Test hiện
+tại chặn cả hai caller ngay sau bước đọc bằng một barrier, rồi mới thả cả hai
+cùng lúc vào bước ghi — revert `244bece` thì nó fail với **hai** response 200,
+đúng triệu chứng session bị fork.
 
 ---
 
